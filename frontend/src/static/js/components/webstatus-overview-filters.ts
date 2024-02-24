@@ -32,6 +32,9 @@ export class WebstatusOverviewFilters extends LitElement {
         .filter-by-feature-name {
           gap: 1em;
         }
+        sl-menu.vbox {
+          padding: 0 1em;
+        }
       `,
     ];
   }
@@ -48,13 +51,13 @@ export class WebstatusOverviewFilters extends LitElement {
           <sl-icon name="search" slot="prefix"></sl-icon>
         </sl-input>
 
-        <sl-dropdown>
+        <sl-dropdown stay-open-on-select>
           <sl-button slot="trigger">
             <sl-icon slot="prefix" name="filter"></sl-icon>
             Filter
           </sl-button>
           <sl-menu>
-            <sl-menu-item value="available-on"
+            <sl-menu-item value="available-on" stay-open-on-select
               >Available on
               <sl-menu slot="submenu">
                 <sl-menu-item type="checkbox" value="chrome">
@@ -69,6 +72,24 @@ export class WebstatusOverviewFilters extends LitElement {
                 </sl-menu-item>
               </sl-menu>
             </sl-menu-item>
+            <sl-dropdown stay-open-on-select>
+              <sl-menu-item slot="trigger" value="web-platform-test-score">
+                Web platform test score
+                <sl-menu class="vbox" slot="submenu">
+                  <sl-checkbox type="checkbox" value="chrome">
+                    Chrome
+                  </sl-checkbox>
+                  <sl-checkbox type="checkbox" value="edge"> Edge </sl-checkbox>
+                  <sl-checkbox type="checkbox" value="firefox">
+                    Firefox
+                  </sl-checkbox>
+                  <sl-checkbox type="checkbox" value="safari">
+                    Safari
+                  </sl-checkbox>
+                </sl-menu>
+              </sl-menu-item>
+            </sl-dropdown>
+
             <sl-menu-item value="not-available-on">
               Not available on
               <sl-menu slot="submenu">
@@ -161,6 +182,7 @@ export class WebstatusOverviewFilters extends LitElement {
               name="square-split-horizontal"
               library="phosphor"
             ></sl-icon>
+            Columns
           </sl-button>
         </sl-dropdown>
       </div>
