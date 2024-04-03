@@ -42,3 +42,8 @@ variable "backend_api_host" {
 variable "gsi_client_id" {
   type = string
 }
+
+variable "oauth2_proxy_tag" {
+  type    = string
+  default = "v7.6.0-amd64"
+}

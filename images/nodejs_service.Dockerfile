@@ -47,6 +47,8 @@ CMD npm run start
 FROM nginx:alpine3.18-slim as static
 
 ARG service_dir
-COPY --from=builder /work/${service_dir}/nginx.conf /etc/nginx/nginx.conf
+ARG nginx_config_filename
+
+COPY --from=builder /work/${service_dir}/${nginx_config_filename} /etc/nginx/nginx.conf
 COPY --from=production /work/${service_dir}/dist/static /usr/share/nginx/html
 COPY --from=builder /work/${service_dir}/scripts/setup_server.sh /docker-entrypoint.d/setup_server.sh

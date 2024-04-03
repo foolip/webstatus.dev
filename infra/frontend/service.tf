@@ -14,6 +14,12 @@
 
 locals {
   service_dir = "frontend"
+  service_sha = sha1(join(
+    "",
+    [filesha1(join("", [path.cwd, "/../images/nodejs_service.Dockerfile"]))],
+    [for f in fileset(path.cwd, "/../${local.service_dir}/**") : filesha1(f)],
+    [for f in fileset(path.cwd, "/../lib/**") : filesha1(f)]
+  ))
 }
 
 resource "docker_image" "frontend" {
@@ -22,12 +28,13 @@ resource "docker_image" "frontend" {
     context = "${path.cwd}/.."
     build_args = {
       service_dir : local.service_dir
+      nginx_config_filename : "nginx.local.conf"
     }
     target     = "static"
     dockerfile = "images/nodejs_service.Dockerfile"
   }
   triggers = {
-    dir_sha1 = sha1(join("", [for f in fileset(path.cwd, "/../${local.service_dir}/**") : filesha1(f)], [for f in fileset(path.cwd, "/../lib/**") : filesha1(f)]))
+    dir_sha1 = local.service_sha
   }
 }
 
@@ -35,8 +42,32 @@ resource "docker_registry_image" "frontend_remote_image" {
   name          = docker_image.frontend.name
   keep_remotely = true
   triggers = {
-    dir_sha1 = sha1(join("", [for f in fileset(path.cwd, "/../${local.service_dir}/**") : filesha1(f)], [for f in fileset(path.cwd, "/../lib/**") : filesha1(f)]))
+    dir_sha1 = local.service_sha
   }
+}
+
+
+locals {
+  tagged_oauth2_proxy_image = "${var.docker_repository_details.url}/oauth2_proxy:${var.oauth2_proxy_tag}"
+}
+
+resource "docker_image" "oauth2_proxy" {
+  name         = "quay.io/oauth2-proxy/oauth2-proxy:${var.oauth2_proxy_tag}"
+  keep_locally = false # No need to store it locally long-term
+}
+
+resource "null_resource" "retag_oauth2_proxy" {
+  depends_on = [docker_image.oauth2_proxy] # Ensure the image is pulled first
+
+  provisioner "local-exec" {
+    command = "docker tag ${docker_image.oauth2_proxy.name} ${local.tagged_oauth2_proxy_image}"
+  }
+}
+
+resource "docker_registry_image" "oauth2_proxy_gcr" {
+  name = local.tagged_oauth2_proxy_image
+
+  depends_on = [null_resource.retag_oauth2_proxy] # Make sure the image is re-tagged
 }
 
 
@@ -81,6 +112,38 @@ resource "google_cloud_run_v2_service" "service" {
         value = data.google_project.datastore_project.number
       }
     }
+    # # oauth2-proxy Container
+    # containers {
+    #   image = docker_registry_image.oauth2_proxy_gcr.name
+    #   args = [
+    #     "--provider=google",
+    #     "--client-id=${var.gsi_client_id}",
+    #     # "--upstream=http://127.0.0.1:5555",
+    #     "--redirect-url=https://website-webstatus-dev.corp.goog/oauth2/callback",
+    #     "--reverse-proxy=true",
+    #     "--email-domain=google.com"
+    #   ]
+
+    #   env {
+    #     name = "OAUTH2_PROXY_CLIENT_SECRET"
+    #     value_source {
+    #       secret_key_ref {
+    #         secret  = "projects/845410142324/secrets/staging-oauth-client-secret"
+    #         version = "latest"
+    #       }
+    #     }
+    #   }
+
+    #   env {
+    #     name = "OAUTH2_PROXY_COOKIE_SECRET"
+    #     value_source {
+    #       secret_key_ref {
+    #         secret  = "projects/845410142324/secrets/staging-oauth-cookie-secret"
+    #         version = "latest"
+    #       }
+    #     }
+    #   }
+    # }
     vpc_access {
       network_interfaces {
         network    = "projects/${data.google_project.host_project.name}/global/networks/${var.vpc_name}"
