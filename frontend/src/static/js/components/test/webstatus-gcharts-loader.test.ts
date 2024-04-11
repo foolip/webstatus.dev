@@ -27,7 +27,8 @@ describe('webstatus-gcharts-loader', () => {
       html`<webstatus-gcharts-loader></webstatus-gcharts-loader>`
     );
     assert.exists(component);
-    assert.equal(component.gchartsLibraryLoaded, true);
+    await component.gchartsLoaderPromise;
+
   });
 
   it('can have child components which are provided the load state via context', async () => {
@@ -35,7 +36,7 @@ describe('webstatus-gcharts-loader', () => {
     class FakeChildElement extends LitElement {
       @consume({context: gchartsContext, subscribe: true})
       @property({attribute: false})
-      gchartsLibraryLoaded!: boolean;
+      gchartsLoaderPromise!: Promise<void>;
     }
 
     const root = document.createElement('div');
@@ -58,9 +59,9 @@ describe('webstatus-gcharts-loader', () => {
     await childComponent.updateComplete;
 
     assert.exists(component);
-    assert.equal(component.gchartsLibraryLoaded, true);
+    await component.gchartsLoaderPromise;
 
     assert.exists(childComponent);
-    assert.equal(childComponent.gchartsLibraryLoaded, true);
+    await childComponent.gchartsLoaderPromise;
   });
 });

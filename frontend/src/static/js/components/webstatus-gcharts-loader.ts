@@ -26,7 +26,7 @@ import {gchartsContext} from '../contexts/gcharts-context.js';
 @customElement('webstatus-gcharts-loader')
 export class WebstatusGChartsLoader extends LitElement {
   @state()
-  gchartsLibraryLoaded = false;
+  gchartsLoaderPromise?: Promise<void>;
 
   @state()
   gchartsProvider = new ContextProvider(this, {
@@ -38,14 +38,15 @@ export class WebstatusGChartsLoader extends LitElement {
   }
 
   loadGoogleCharts() {
-    google.charts
+    this.gchartsLoaderPromise = google.charts
       .load('current', {
         packages: ['corechart'],
-      })
-      .then(() => {
-        this.gchartsLibraryLoaded = true;
-        this.gchartsProvider.setValue(this.gchartsLibraryLoaded);
       });
+
+      // .then(() => {
+      //   this.gchartsLibraryLoaded = true;
+      //   this.gchartsProvider.setValue(this.gchartsLibraryLoaded);
+      // });
   }
 
   // Render conditional on the loading state of the task.

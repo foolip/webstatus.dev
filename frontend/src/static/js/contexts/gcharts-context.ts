@@ -16,4 +16,4 @@
 
 import {createContext} from '@lit/context';
 
-export const gchartsContext = createContext<boolean>('gcharts');
+export const gchartsContext = createContext<Promise<void>>('gcharts');

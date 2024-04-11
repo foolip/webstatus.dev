@@ -58,7 +58,7 @@ export class StatsPage extends LitElement {
 
   @consume({context: gchartsContext, subscribe: true})
   @state()
-  gchartsLibraryLoaded = false;
+  gchartsLoaderPromise?: Promise<void>;
 
   @consume({context: apiClientContext})
   apiClient!: APIClient;
@@ -176,22 +176,22 @@ export class StatsPage extends LitElement {
           this.apiClient,
           this.startDate,
           this.endDate,
-          this.gchartsLibraryLoaded,
-        ] as [APIClient, Date, Date, boolean],
-      task: async ([apiClient, startDate, endDate, gcLoaded]: [
+          this.gchartsLoaderPromise,
+        ] as [APIClient, Date, Date, undefined | Promise<void>],
+      task: async ([apiClient, startDate, endDate, gcLoader]: [
         APIClient,
         Date,
         Date,
-        boolean,
+        undefined | Promise<void>,
       ]) => {
-        if (gcLoaded) {
-          await this._fetchGlobalFeatureSupportData(
+        Promise.all([gcLoader,
+          this._fetchGlobalFeatureSupportData(
             apiClient,
             startDate,
             endDate
-          );
-        }
-        return this.globalFeatureSupport;
+          )]).then(() => {
+            return this.globalFeatureSupport;
+        });
       },
     });
   }
@@ -199,9 +199,7 @@ export class StatsPage extends LitElement {
   async firstUpdated(): Promise<void> {}
 
   updated() {
-    if (this.gchartsLibraryLoaded) {
-      this.drawGlobalFeatureSupportChart();
-    }
+    this.drawGlobalFeatureSupportChart();
   }
 
   // Make a DataTable from the data in globalFeatureSupport
@@ -327,7 +325,7 @@ export class StatsPage extends LitElement {
   }
 
   renderGlobalFeatureSupportChart(): TemplateResult | undefined {
-    if (!this.gchartsLibraryLoaded) return html`Loading chart library.`;
+    // if (!this.gchartsLibraryLoaded) return html`Loading chart library.`;
     return this._loadingGFSTask.render({
       complete: () => this.renderGlobalFeatureSupportChartWhenComplete(),
       error: () => this.renderChartWhenError(),
