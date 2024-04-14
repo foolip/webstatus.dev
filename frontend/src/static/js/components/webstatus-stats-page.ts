@@ -138,6 +138,22 @@ export class StatsPage extends LitElement {
     this.drawGlobalFeatureSupportChart();
   }
 
+  globalFeatureSupportResizeObserver: ResizeObserver | null = null;
+
+  setupResizeObserver() {
+    // Set up ResizeObserver one time to redraw chart when container resizes.
+    if (!this.globalFeatureSupportResizeObserver) {
+      const gfsChartElement = this.shadowRoot!.getElementById(
+        'global-feature-support-chart'
+      );
+      if (!gfsChartElement) return;
+      this.globalFeatureSupportResizeObserver = new ResizeObserver(() => {
+        this.drawGlobalFeatureSupportChart();
+      });
+      this.globalFeatureSupportResizeObserver.observe(gfsChartElement);
+    }
+  }
+
   async _fetchGlobalFeatureSupportData(
     apiClient: APIClient,
     startDate: Date,
@@ -158,13 +174,6 @@ export class StatsPage extends LitElement {
         );
       }
     }
-  }
-
-  setupGlobalFeatureSupportChart() {
-    // Add window resize event handler to redraw the chart.
-    window.addEventListener('resize', () => {
-      this.drawGlobalFeatureSupportChart();
-    });
   }
 
   constructor() {
@@ -196,8 +205,6 @@ export class StatsPage extends LitElement {
     });
   }
 
-  async firstUpdated(): Promise<void> {}
-
   updated() {
     this.drawGlobalFeatureSupportChart();
   }
@@ -215,8 +222,8 @@ export class StatsPage extends LitElement {
     }
     dataTable.addColumn('number', 'Total');
 
-    // Map from date to array of counts for each browser
-    const dateToBrowserDataMap = new Map<number, Array<number>>();
+    // Map from date to an object with counts for each browser
+    const dateToBrowserDataMap = new Map<number, {[key: string]: number}>();
     // Map from date to array of total_tests_count, the same for all browsers.
     const dateToTotalTestsCountMap = new Map<number, number>();
 
@@ -231,35 +238,44 @@ export class StatsPage extends LitElement {
         const dateSeconds = new Date(row.run_timestamp).getTime();
         const testPassCount = row.test_pass_count!;
         if (!dateToBrowserDataMap.has(dateSeconds)) {
-          dateToBrowserDataMap.set(dateSeconds, [testPassCount]);
+          dateToBrowserDataMap.set(dateSeconds, {});
           dateToTotalTestsCountMap.set(dateSeconds, row.total_tests_count!);
-        } else {
-          dateToBrowserDataMap.get(dateSeconds)!.push(testPassCount);
         }
+        const browserCounts = dateToBrowserDataMap.get(dateSeconds)!;
+        browserCounts[browser] = testPassCount;
       }
     }
 
-    // Sort the dateToBrowserDataMap by dateSeconds
+    // Create array of dateToBrowserDataMap entries and sort by dateSeconds
     const data = Array.from(dateToBrowserDataMap.entries()).sort(
       ([d1], [d2]) => d1 - d2
     );
 
     // For each date, add a row to the dataTable
-    for (const row of data) {
-      const dateSeconds = row[0];
+    for (const datum of data) {
+      const dateSeconds = datum[0];
       const date = new Date(dateSeconds);
-      const browserCounts = row[1];
+      const browserCounts = datum[1];
+      // Make an array of browser counts, in the order of browsers.
+      // If the browser is not in the browserCounts, add null.
+      const browserCountArray = browsers.map(browser => {
+        return browserCounts[browser] || null;
+      });
       const total = dateToTotalTestsCountMap.get(dateSeconds)!;
-      dataTable.addRow([date, ...browserCounts, total]);
+      dataTable.addRow([date, ...browserCountArray, total]);
     }
     return dataTable;
   }
 
   drawGlobalFeatureSupportChart(): void {
+    if (!this.gchartsLibraryLoaded) return;
+
     const gfsChartElement = this.shadowRoot!.getElementById(
       'global-feature-support-chart'
     );
     if (!gfsChartElement) return;
+    this.setupResizeObserver();
+
     const datatable = this.createGlobalFeatureSupportDataTableFromMap();
 
     // Add 2 weeks to this.endDate.
@@ -290,7 +306,7 @@ export class StatsPage extends LitElement {
             >Start date
             <sl-input
               id="start-date"
-              @sl-blur=${this.handleStartDateChange}
+              @sl-change=${this.handleStartDateChange}
               type="date"
               .valueAsDate="${this.startDate}"
             ></sl-input>
@@ -299,7 +315,7 @@ export class StatsPage extends LitElement {
             >End date
             <sl-input
               id="end-date"
-              @sl-blur=${this.handleEndDateChange}
+              @sl-change=${this.handleEndDateChange}
               type="date"
               .valueAsDate="${this.endDate}"
             ></sl-input>

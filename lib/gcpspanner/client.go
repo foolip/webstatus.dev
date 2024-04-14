@@ -87,6 +87,8 @@ type FeatureCursorLastSortValueType interface {
 
 // FeatureResultOffsetCursor: A numerical offset from the start of the result set. Enables the construction of
 // human-friendly URLs specifying an exact page offset.
+// Disclaimer: External users should be aware that the format of this token is subject to change and should not be
+// treated as a stable interface. Instead, external users should rely on the returned pagination token long term.
 type FeatureResultOffsetCursor struct {
 	Offset int `json:"offset"`
 }
@@ -247,6 +249,30 @@ func encodeFeatureResultCursor(sortOrder Sortable, lastResult FeatureResult) str
 
 	// Should be not reached. Linting should catch all the cases as more are added.
 	return ""
+}
+
+// BrowserFeatureCountCursor: Represents a point for resuming feature count queries. Designed for efficient pagination
+// by storing the following:
+//   - LastReleaseDate: The release date of the last result from the previous page, used to continue fetching from the
+//     correct point.
+//   - LastCumulativeCount: The cumulative count of features up to (and including) the 'LastReleaseDate'.
+//     This eliminates the need to recalculate the count for prior pages.
+type BrowserFeatureCountCursor struct {
+	LastReleaseDate     time.Time `json:"last_release_date"`
+	LastCumulativeCount int64     `json:"last_cumulative_count"`
+}
+
+// decodeBrowserFeatureCountCursor provides a wrapper around the generic decodeCursor.
+func decodeBrowserFeatureCountCursor(cursor string) (*BrowserFeatureCountCursor, error) {
+	return decodeCursor[BrowserFeatureCountCursor](cursor)
+}
+
+// encodeBrowserFeatureCountCursor provides a wrapper around the generic encodeCursor.
+func encodeBrowserFeatureCountCursor(releaseDate time.Time, lastCount int64) string {
+	return encodeCursor[BrowserFeatureCountCursor](BrowserFeatureCountCursor{
+		LastReleaseDate:     releaseDate,
+		LastCumulativeCount: lastCount,
+	})
 }
 
 // encodeWPTRunCursor provides a wrapper around the generic encodeCursor.
