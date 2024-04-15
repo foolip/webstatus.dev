@@ -42,11 +42,9 @@ export class WebstatusGChartsLoader extends LitElement {
       .load('current', {
         packages: ['corechart'],
       });
-
-      // .then(() => {
-      //   this.gchartsLibraryLoaded = true;
-      //   this.gchartsProvider.setValue(this.gchartsLibraryLoaded);
-      // });
+    this.gchartsLoaderPromise.then(() => {
+        this.gchartsProvider.setValue(this.gchartsLoaderPromise!);
+    });
   }
 
   // Render conditional on the loading state of the task.

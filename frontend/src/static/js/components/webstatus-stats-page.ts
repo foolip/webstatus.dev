@@ -193,6 +193,7 @@ export class StatsPage extends LitElement {
         Date,
         undefined | Promise<void>,
       ]) => {
+        if (!gcLoader) return undefined;
         Promise.all([gcLoader,
           this._fetchGlobalFeatureSupportData(
             apiClient,
@@ -268,7 +269,7 @@ export class StatsPage extends LitElement {
   }
 
   drawGlobalFeatureSupportChart(): void {
-    if (!this.gchartsLibraryLoaded) return;
+    if (!this.gchartsLoaderPromise) return;
 
     const gfsChartElement = this.shadowRoot!.getElementById(
       'global-feature-support-chart'
