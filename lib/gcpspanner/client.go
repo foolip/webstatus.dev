@@ -87,6 +87,12 @@ type FeatureResultOffsetCursor struct {
 	Offset int `json:"offset"`
 }
 
+// LaggingFeatureCountCursor: Represents a point for resuming queries based on the last
+// browser release date. Useful for pagination.
+type LaggingFeatureCountCursor struct {
+	ReleaseDate time.Time `json:"release_date"`
+}
+
 // decodeWPTRunCursor provides a wrapper around the generic decodeCursor.
 func decodeWPTRunCursor(cursor string) (*WPTRunCursor, error) {
 	return decodeCursor[WPTRunCursor](cursor)
@@ -106,6 +112,11 @@ func decodeInputFeatureResultCursor(
 	}
 
 	return offsetCursor, nil
+}
+
+// decodeLaggingFeatureCountCursor provides a wrapper around the generic decodeCursor.
+func decodeLaggingFeatureCountCursor(cursor string) (*LaggingFeatureCountCursor, error) {
+	return decodeCursor[LaggingFeatureCountCursor](cursor)
 }
 
 // decodeCursor: Decodes a base64-encoded cursor string into a Cursor struct.
@@ -169,5 +180,12 @@ func encodeCursor[T any](in T) string {
 func encodeFeatureResultOffsetCursor(offset int) string {
 	return encodeCursor(FeatureResultOffsetCursor{
 		Offset: offset,
+	})
+}
+
+// encodeLaggingFeatureCountCursor provides a wrapper around the generic encodeCursor.
+func encodeLaggingFeatureCountCursor(releaseDate time.Time) string {
+	return encodeCursor(LaggingFeatureCountCursor{
+		ReleaseDate: releaseDate,
 	})
 }
