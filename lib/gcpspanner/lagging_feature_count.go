@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"cloud.google.com/go/spanner"
@@ -36,40 +37,43 @@ var (
 
 // nolint:lll // WONTFIX. Long lines to help with readability.
 const laggingFeatureCountRawTemplate = `
-SELECT br.ReleaseDate AS ReleaseDate,
+SELECT releases.ReleaseDate AS ReleaseDate,
        (
            SELECT COUNT(DISTINCT wf.FeatureKey)
            FROM WebFeatures wf
            WHERE
-             {{range $param := .OtherBrowserParamNames}}
+           -- Feature exists in ALL other browsers BEFORE OR ON this ReleaseDate
+             {{range $browser := .OtherBrowserParamNames}}
                EXISTS (
                  SELECT 1
                  FROM BrowserFeatureAvailabilities bfa
+                 JOIN BrowserReleases br ON bfa.BrowserName = br.BrowserName
                  WHERE bfa.WebFeatureID = wf.ID
-                   AND bfa.BrowserName = @{{ $param }}
+                   AND bfa.BrowserName = @{{ $browser }}
+                   AND br.ReleaseDate <= releases.ReleaseDate
                )
                AND
              {{end}}
-             NOT EXISTS ( -- does not exist in target
+             NOT EXISTS ( -- Feature DOES NOT exist in target browser BEFORE OR ON this ReleaseDate
                SELECT 1
                FROM BrowserFeatureAvailabilities bfa_target
+               JOIN BrowserReleases br_target ON bfa_target.BrowserName = br_target.BrowserName
                WHERE bfa_target.WebFeatureID = wf.ID
-                 AND bfa_target.BrowserName = @{{ .TargetBrowserParamName }}
-             )
+                 AND br_target.BrowserName = @{{ .TargetBrowserParamName }}
+                 AND br_target.ReleaseDate <= releases.ReleaseDate
+           )
        ) AS Count
 FROM (
-    SELECT BrowserName, BrowserVersion, ReleaseDate
+    SELECT ReleaseDate
     FROM BrowserReleases
     WHERE BrowserName IN ({{ range $param := .OtherBrowserParamNames }}@{{ $param }},{{end}} @{{ .TargetBrowserParamName }})
-) br
-WHERE
-  br.BrowserName = @{{ .TargetBrowserParamName }}
-  AND ReleaseDate >= @startAt
-  AND ReleaseDate <= @endAt
-{{if .ReleaseDateParam }}
-  AND br.ReleaseDate < @{{ .ReleaseDateParam }}
-{{end}}
-ORDER BY br.ReleaseDate DESC
+) releases
+WHERE releases.ReleaseDate >= @startAt
+  AND releases.ReleaseDate < @endAt
+  {{if .ReleaseDateParam }}
+  AND releases.ReleaseDate < @{{ .ReleaseDateParam }}
+  {{end}}
+ORDER BY releases.ReleaseDate DESC
 LIMIT @limit;
 `
 
@@ -168,6 +172,8 @@ func (c *Client) ListLaggingFeatureCountInBrowser(
 		endAt,
 		pageSize,
 	)
+
+	slog.Info("stmt", "sql", stmt.SQL, "params", stmt.Params)
 
 	it := txn.Query(ctx, stmt)
 	defer it.Stop()

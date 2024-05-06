@@ -44,10 +44,12 @@ func loadDataForListLaggingFeatureCountInBrowser(ctx context.Context, t *testing
 		// barBrowser Releases
 		{BrowserName: "barBrowser", BrowserVersion: "113", ReleaseDate: time.Date(2024, 1, 20, 0, 0, 0, 0, time.UTC)},
 		{BrowserName: "barBrowser", BrowserVersion: "114", ReleaseDate: time.Date(2024, 3, 28, 0, 0, 0, 0, time.UTC)},
+		{BrowserName: "barBrowser", BrowserVersion: "115", ReleaseDate: time.Date(2024, 4, 1, 0, 0, 0, 0, time.UTC)},
 
 		// bazBrowser Releases
 		{BrowserName: "bazBrowser", BrowserVersion: "16.4", ReleaseDate: time.Date(2024, 1, 25, 0, 0, 0, 0, time.UTC)},
 		{BrowserName: "bazBrowser", BrowserVersion: "16.5", ReleaseDate: time.Date(2024, 3, 5, 0, 0, 0, 0, time.UTC)},
+		{BrowserName: "bazBrowser", BrowserVersion: "17", ReleaseDate: time.Date(2024, 4, 1, 0, 0, 0, 0, time.UTC)},
 	}
 	for _, release := range browserReleases {
 		err := client.InsertBrowserRelease(ctx, release)
@@ -92,11 +94,11 @@ func loadDataForListLaggingFeatureCountInBrowser(ctx context.Context, t *testing
 		{
 			BrowserFeatureAvailability: BrowserFeatureAvailability{BrowserName: "bazBrowser", BrowserVersion: "16.4"},
 			FeatureKey:                 "FeatureX",
-		}, // Available from bazBrowser 111
+		}, // Available from bazBrowser 16.4
 		{
 			BrowserFeatureAvailability: BrowserFeatureAvailability{BrowserName: "bazBrowser", BrowserVersion: "16.5"},
 			FeatureKey:                 "FeatureY",
-		}, // Available from bazBrowser 112
+		}, // Available from bazBrowser 16.5
 	}
 	for _, availability := range browserFeatureAvailabilities {
 		err := client.InsertBrowserFeatureAvailability(ctx,
